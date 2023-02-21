@@ -178,6 +178,7 @@ local function CreateZone(type, number)
 end
 
 local function deliverVehicle(vehicle)
+  print("Inside deliver vehicle")
     DeleteVehicle(vehicle)
     RemoveBlip(CurrentBlip2)
     JobsDone = JobsDone + 1
@@ -209,6 +210,7 @@ local function CreateElements()
     BeginTextCommandSetBlipName("STRING")
     AddTextComponentSubstringPlayerName(Config.Locations["main"].label)
     EndTextCommandSetBlipName(TowBlip)
+    SetNewWaypoint(Config.Locations["main"].coords.x, Config.Locations["main"].coords.y)
 
     local TowVehBlip = AddBlipForCoord(Config.Locations["vehicle"].coords.x, Config.Locations["vehicle"].coords.y, Config.Locations["vehicle"].coords.z)
     SetBlipSprite(TowVehBlip, 326)
@@ -246,18 +248,16 @@ end)
 
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
     PlayerJob = QBCore.Functions.GetPlayerData().job
-
     if PlayerJob.name == "tow" then
         CreateElements()
     end
 end)
 
 RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
-    PlayerJob = JobInfo
-
-    if PlayerJob.name == "tow" then
-        CreateElements()
-    end
+  PlayerJob = JobInfo
+  if PlayerJob.name == "tow" then
+    CreateElements()
+  end
 end)
 
 RegisterNetEvent('jobs:client:ToggleNpc', function()
@@ -365,8 +365,9 @@ RegisterNetEvent('qb-tow:client:TowVehicle', function()
                 DetachEntity(CurrentTow, true, true)
                 if NpcOn then
                     local targetPos = GetEntityCoords(CurrentTow)
-                    if #(targetPos - vector3(Config.Locations["vehicle"].coords.x, Config.Locations["vehicle"].coords.y, Config.Locations["vehicle"].coords.z)) < 25.0 then
-                        deliverVehicle(CurrentTow)
+                    if #(targetPos - vector3(Config.Locations["dropoff"].coords.x, Config.Locations["dropoff"].coords.y, Config.Locations["dropoff"].coords.z)) < 25.0 then
+                      print("Tow successful, initiating delivery")
+                      deliverVehicle(CurrentTow)
                     end
                 end
                 RemoveBlip(CurrentBlip2)
@@ -443,7 +444,6 @@ CreateThread(function()
     while true do
         if showMarker then
             DrawMarker(2, Config.Locations["vehicle"].coords.x, Config.Locations["vehicle"].coords.y, Config.Locations["vehicle"].coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.15, 200, 0, 0, 222, false, false, false, true, false, false, false)
-            --DrawMarker(2, Config.Locations["vehicle"].coords.x, Config.Locations["vehicle"].coords.y, Config.Locations["vehicle"].coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.15, 200, 200, 200, 222, false, false, false, true, false, false, false)
             Wait(0)
         else
             Wait(1000)
