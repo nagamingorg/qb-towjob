@@ -105,6 +105,13 @@ local function CreateZone(type, number)
         heading = Config.Locations[type].coords.h
         boxName = Config.Locations[type].label
         size = 5
+    elseif type == "vehiclereturn" then
+        event = "qb-tow:client:VehicleReturn"
+        label = Lang:t("label.vehiclereturn")
+        coords = vector3(Config.Locations[type].coords.x, Config.Locations[type].coords.y, Config.Locations[type].coords.z)
+        heading = Config.Locations[type].coords.h
+        boxName = Config.Locations[type].label
+        size = 5
     elseif type == "towspots" then
         event = "qb-tow:client:SpawnNPCVehicle"
         label = Lang:t("label.npcz")
@@ -146,6 +153,8 @@ local function CreateZone(type, number)
             if isPointInside then
                 if type == "main" then
                     TriggerEvent('qb-tow:client:PaySlip')
+                elseif type == "vehiclereturn" then
+                  TriggerEvent('qb-tow:client:VehicleReturn')
                 elseif type == "vehicle" then
                     TriggerEvent('qb-tow:client:Vehicle')
                 elseif type == "towspots" then
@@ -178,7 +187,7 @@ local function CreateZone(type, number)
 end
 
 local function deliverVehicle(vehicle)
-  print("Inside deliver vehicle")
+  --print("Inside deliver vehicle")
     DeleteVehicle(vehicle)
     RemoveBlip(CurrentBlip2)
     JobsDone = JobsDone + 1
@@ -222,28 +231,26 @@ local function CreateElements()
     AddTextComponentSubstringPlayerName(Config.Locations["vehicle"].label)
     EndTextCommandSetBlipName(TowVehBlip)
 
+    local TowReturnBlip = AddBlipForCoord(Config.Locations["vehiclereturn"].coords.x, Config.Locations["vehiclereturn"].coords.y, Config.Locations["vehiclereturn"].coords.z)
+    SetBlipSprite(TowReturnBlip, 357)
+    SetBlipDisplay(TowReturnBlip, 4)
+    SetBlipScale(TowReturnBlip, 0.6)
+    SetBlipAsShortRange(TowReturnBlip, true)
+    SetBlipColour(TowReturnBlip, 15)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentSubstringPlayerName(Config.Locations["vehiclereturn"].label)
+    EndTextCommandSetBlipName(TowReturnBlip)
+
     CreateZone("main")
     CreateZone("vehicle")
+    CreateZone("vehiclereturn")
 end
 -- Events
-
-RegisterNetEvent('qb-tow:client:SpawnVehicle', function()
-    local vehicleInfo = selectedVeh
-    local coords = Config.Locations["vehicle"].coords
-    QBCore.Functions.TriggerCallback('QBCore:Server:SpawnVehicle', function(netId)
-        local veh = NetToVeh(netId)
-        SetVehicleNumberPlateText(veh, "TOWR"..tostring(math.random(1000, 9999)))
-        SetEntityHeading(veh, coords.w)
-        exports['LegacyFuel']:SetFuel(veh, 100.0)
-        SetEntityAsMissionEntity(veh, true, true)
-        CloseMenuFull()
-        TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
-        TriggerEvent("vehiclekeys:client:SetOwner", QBCore.Functions.GetPlate(veh))
-        SetVehicleEngineOn(veh, true, true)
-        for i = 1, 9, 1 do
-            SetVehicleExtra(veh, i, 0)
-        end
-    end, vehicleInfo, coords, false)
+AddEventHandler('onResourceStart', function(resourceName)
+  -- handles script restarts
+  if GetCurrentResourceName() == resourceName then
+    CreateElements()
+  end
 end)
 
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
@@ -258,6 +265,25 @@ RegisterNetEvent('QBCore:Client:OnJobUpdate', function(JobInfo)
   if PlayerJob.name == "tow" then
     CreateElements()
   end
+end)
+
+RegisterNetEvent('qb-tow:client:SpawnVehicle', function()
+  local vehicleInfo = selectedVeh
+  local coords = Config.Locations["vehicle"].coords
+  QBCore.Functions.TriggerCallback('QBCore:Server:SpawnVehicle', function(netId)
+      local veh = NetToVeh(netId)
+      SetVehicleNumberPlateText(veh, "TOWR"..tostring(math.random(1000, 9999)))
+      SetEntityHeading(veh, coords.w)
+      exports['LegacyFuel']:SetFuel(veh, 100.0)
+      SetEntityAsMissionEntity(veh, true, true)
+      CloseMenuFull()
+      TaskWarpPedIntoVehicle(PlayerPedId(), veh, -1)
+      TriggerEvent("vehiclekeys:client:SetOwner", QBCore.Functions.GetPlate(veh))
+      SetVehicleEngineOn(veh, true, true)
+      for i = 1, 9, 1 do
+          SetVehicleExtra(veh, i, 0)
+      end
+  end, vehicleInfo, coords, false)
 end)
 
 RegisterNetEvent('jobs:client:ToggleNpc', function()
@@ -401,15 +427,28 @@ end)
 RegisterNetEvent('qb-tow:client:Vehicle', function()
     local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
     if not CurrentTow then
-        if vehicle and isTowVehicle(vehicle) then
-            DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
-            TriggerServerEvent('qb-tow:server:DoBail', false)
-        else
-            MenuGarage()
-        end
+      /*if vehicle and isTowVehicle(vehicle) then
+        DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
+        TriggerServerEvent('qb-tow:server:DoBail', false)
+      else
+        MenuGarage()
+      end*/
+      MenuGarage()
     else
         QBCore.Functions.Notify(Lang:t("error.finish_work"), "error")
     end
+end)
+
+RegisterNetEvent('qb-tow:client:VehicleReturn', function()
+  local vehicle = GetVehiclePedIsIn(PlayerPedId(), false)
+  if not CurrentTow then
+    if vehicle and isTowVehicle(vehicle) then
+      DeleteVehicle(GetVehiclePedIsIn(PlayerPedId()))
+      TriggerServerEvent('qb-tow:server:DoBail', false)
+    end
+  else
+      QBCore.Functions.Notify(Lang:t("error.finish_work"), "error")
+  end
 end)
 
 RegisterNetEvent('qb-tow:client:PaySlip', function()
@@ -444,6 +483,7 @@ CreateThread(function()
     while true do
         if showMarker then
             DrawMarker(2, Config.Locations["vehicle"].coords.x, Config.Locations["vehicle"].coords.y, Config.Locations["vehicle"].coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.15, 200, 0, 0, 222, false, false, false, true, false, false, false)
+            DrawMarker(2, Config.Locations["vehiclereturn"].coords.x, Config.Locations["vehiclereturn"].coords.y, Config.Locations["vehiclereturn"].coords.z, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.15, 102, 178, 255, 222, false, false, false, true, false, false, false)
             Wait(0)
         else
             Wait(1000)

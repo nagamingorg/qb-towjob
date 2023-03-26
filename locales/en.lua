@@ -35,6 +35,7 @@ local Translations = {
     label = {
         payslip = "Payslip",
         vehicle = "Vehicle",
+        vehiclereturn = "Vehicle return location",
         npcz = "NPCZone",
     }
 }
