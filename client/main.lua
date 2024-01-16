@@ -392,8 +392,7 @@ RegisterNetEvent('qb-tow:client:TowVehicle', function()
                 if NpcOn then
                     local targetPos = GetEntityCoords(CurrentTow)
                     if #(targetPos - vector3(Config.Locations["dropoff"].coords.x, Config.Locations["dropoff"].coords.y, Config.Locations["dropoff"].coords.z)) < 25.0 then
-                      print("Tow successful, initiating delivery")
-                      deliverVehicle(CurrentTow)
+                        deliverVehicle(CurrentTow)
                     end
                 end
                 RemoveBlip(CurrentBlip2)
